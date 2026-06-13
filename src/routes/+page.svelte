@@ -54,20 +54,20 @@
 		<p class="alert" role="alert">{form.error}</p>
 	{/if}
 
-	<section class="ledger">
+	<section class="plans">
 		{#each plans as plan, i (plan.id)}
-			<article class="row" class:featured={plan.featured} style="--i: {i}">
-				<span class="bar" aria-hidden="true"></span>
+			<article class="card" class:featured={plan.featured} style="--i: {i}">
+				{#if plan.featured}<span class="ribbon">Most popular</span>{/if}
 
-				<div class="row-id">
+				<header class="card-head">
 					<span class="num">0{i + 1}</span>
-					<div class="row-name">
-						<h2>
-							{plan.name}
-							{#if plan.featured}<span class="pill">Most popular</span>{/if}
-						</h2>
-						<p class="tagline">{plan.tagline}</p>
-					</div>
+					<h2>{plan.name}</h2>
+					<p class="tagline">{plan.tagline}</p>
+				</header>
+
+				<div class="price">
+					<span class="amount">${plan.amount}</span>
+					<span class="cadence">{plan.cadence}</span>
 				</div>
 
 				<ul class="features">
@@ -76,41 +76,34 @@
 					{/each}
 				</ul>
 
-				<div class="row-buy">
-					<div class="price">
-						<span class="amount">${plan.amount}</span>
-						<span class="cadence">{plan.cadence}</span>
-					</div>
-
-					<form
-						method="POST"
-						action="?/checkout"
-						use:enhance={() => {
-							submitting = plan.id;
-							return async ({ result }) => {
-								if (result.type === 'redirect') {
-									// Stripe Checkout is cross-origin — must do a full navigation.
-									window.location.href = result.location;
-									return;
-								}
-								await applyAction(result);
-								submitting = null;
-							};
-						}}
-					>
-						<input type="hidden" name="planId" value={plan.id} />
-						<button type="submit" disabled={submitting !== null}>
-							{#if submitting === plan.id}
-								Redirecting…
-							{:else if plan.mode === 'payment'}
-								Buy lifetime
-							{:else}
-								Choose {plan.name}
-							{/if}
-							<span class="arrow" aria-hidden="true">→</span>
-						</button>
-					</form>
-				</div>
+				<form
+					method="POST"
+					action="?/checkout"
+					use:enhance={() => {
+						submitting = plan.id;
+						return async ({ result }) => {
+							if (result.type === 'redirect') {
+								// Stripe Checkout is cross-origin — must do a full navigation.
+								window.location.href = result.location;
+								return;
+							}
+							await applyAction(result);
+							submitting = null;
+						};
+					}}
+				>
+					<input type="hidden" name="planId" value={plan.id} />
+					<button type="submit" disabled={submitting !== null}>
+						{#if submitting === plan.id}
+							Redirecting…
+						{:else if plan.mode === 'payment'}
+							Buy lifetime
+						{:else}
+							Choose {plan.name}
+						{/if}
+						<span class="arrow" aria-hidden="true">→</span>
+					</button>
+				</form>
 			</article>
 		{/each}
 	</section>
@@ -286,120 +279,137 @@
 		font-size: 0.92rem;
 	}
 
-	/* ---------- Pricing ledger ---------- */
-	.ledger {
+	/* ---------- Pricing cards ---------- */
+	.plans {
 		margin-top: 0.5rem;
+		display: grid;
+		grid-template-columns: repeat(4, minmax(0, 1fr));
+		gap: clamp(0.85rem, 1.5vw, 1.15rem);
+		align-items: stretch;
 	}
 
-	.row {
+	.card {
 		position: relative;
-		display: grid;
-		grid-template-columns: minmax(13rem, 1.15fr) minmax(0, 1.5fr) minmax(12.5rem, auto);
-		gap: clamp(1.25rem, 3vw, 3rem);
-		align-items: center;
-		padding: clamp(1.6rem, 3vw, 2.2rem) 0;
-		border-bottom: 1px solid var(--line);
+		display: flex;
+		flex-direction: column;
+		padding: clamp(1.4rem, 2vw, 1.75rem) clamp(1.3rem, 1.8vw, 1.6rem);
+		background: var(--surface);
+		border: 1px solid var(--line);
+		border-radius: 1.1rem;
+		box-shadow: 0 1px 2px rgba(26, 24, 20, 0.03);
 		transition:
-			background 0.3s ease,
-			padding-left 0.3s ease;
+			transform 0.25s ease,
+			box-shadow 0.25s ease,
+			border-color 0.25s ease;
 		animation: rise 0.6s ease both;
 		animation-delay: calc(var(--i) * 70ms + 120ms);
 	}
 
-	.bar {
-		position: absolute;
-		left: -0.75rem;
-		top: 50%;
-		transform: translateY(-50%) scaleY(0);
-		width: 3px;
-		height: 60%;
-		background: var(--accent);
-		border-radius: 3px;
-		transition: transform 0.3s ease;
+	.card:hover {
+		transform: translateY(-4px);
+		border-color: #d3cdbf;
+		box-shadow: 0 16px 36px -20px rgba(26, 24, 20, 0.28);
 	}
 
-	.row:hover {
-		background: linear-gradient(90deg, rgba(255, 255, 255, 0.7), transparent 85%);
-	}
-
-	.row:hover .bar {
-		transform: translateY(-50%) scaleY(1);
-	}
-
-	.row.featured {
+	/* Featured tier — lifted, accent-tinted, ringed */
+	.card.featured {
 		background: var(--accent-tint);
-		border-bottom-color: transparent;
-		border-radius: 1rem;
-		padding-left: clamp(1.25rem, 3vw, 2.25rem);
-		padding-right: clamp(1.25rem, 3vw, 2.25rem);
-		margin: 0.5rem 0;
+		border-color: transparent;
+		box-shadow:
+			0 0 0 1.5px var(--accent),
+			0 18px 40px -22px rgba(22, 58, 44, 0.55);
+		transform: translateY(-0.65rem);
 	}
 
-	.row.featured .bar {
-		left: 0;
-		transform: translateY(-50%) scaleY(1);
+	.card.featured:hover {
+		transform: translateY(-0.95rem);
+		box-shadow:
+			0 0 0 1.5px var(--accent),
+			0 26px 52px -24px rgba(22, 58, 44, 0.55);
 	}
 
-	.row.featured:hover {
-		background: #e4ede7;
+	.ribbon {
+		position: absolute;
+		top: 0;
+		right: clamp(1.3rem, 1.8vw, 1.6rem);
+		transform: translateY(-50%);
+		font-size: 0.62rem;
+		font-weight: 600;
+		letter-spacing: 0.12em;
+		text-transform: uppercase;
+		color: var(--surface);
+		background: var(--accent);
+		padding: 0.3rem 0.65rem;
+		border-radius: 100px;
+		white-space: nowrap;
+		box-shadow: 0 4px 12px -4px rgba(22, 58, 44, 0.5);
 	}
 
 	/* identity */
-	.row-id {
-		display: flex;
-		align-items: baseline;
-		gap: 1rem;
+	.card-head {
+		position: relative;
+		padding-bottom: 1.15rem;
+		margin-bottom: 1.15rem;
+		border-bottom: 1px solid var(--line);
+	}
+
+	.featured .card-head {
+		border-bottom-color: rgba(31, 74, 58, 0.18);
 	}
 
 	.num {
 		font-family: 'Instrument Serif', serif;
-		font-size: 1.1rem;
+		font-style: italic;
+		font-size: 1rem;
 		color: var(--faint);
-		min-width: 1.5rem;
 	}
 
-	.row-name h2 {
-		display: flex;
-		align-items: center;
-		gap: 0.6rem;
-		flex-wrap: wrap;
+	.card-head h2 {
 		font-family: 'Instrument Serif', serif;
 		font-weight: 400;
-		font-size: 1.7rem;
-		line-height: 1.1;
+		font-size: 1.85rem;
+		line-height: 1.05;
 		letter-spacing: -0.01em;
-		margin: 0 0 0.3rem;
-	}
-
-	.pill {
-		font-family: 'Albert Sans', sans-serif;
-		font-size: 0.64rem;
-		font-weight: 600;
-		letter-spacing: 0.1em;
-		text-transform: uppercase;
-		color: var(--surface);
-		background: var(--accent);
-		padding: 0.22rem 0.55rem;
-		border-radius: 100px;
-		white-space: nowrap;
+		margin: 0.15rem 0 0.45rem;
 	}
 
 	.tagline {
-		font-size: 0.88rem;
+		font-size: 0.86rem;
 		line-height: 1.45;
 		color: var(--muted);
 		margin: 0;
-		max-width: 18rem;
+	}
+
+	/* price */
+	.price {
+		display: flex;
+		align-items: baseline;
+		gap: 0.3rem;
+		margin-bottom: 1.25rem;
+	}
+
+	.amount {
+		font-size: 2.6rem;
+		font-weight: 600;
+		letter-spacing: -0.035em;
+		font-feature-settings: 'tnum' 1;
+		line-height: 1;
+	}
+
+	.cadence {
+		font-size: 0.85rem;
+		font-weight: 500;
+		color: var(--faint);
 	}
 
 	/* features */
 	.features {
 		list-style: none;
-		margin: 0;
+		margin: 0 0 1.5rem;
 		padding: 0;
-		display: grid;
-		grid-template-columns: repeat(2, minmax(0, 1fr));
-		gap: 0.55rem 1.25rem;
+		display: flex;
+		flex-direction: column;
+		gap: 0.6rem;
 	}
 
 	.features li {
@@ -438,38 +448,10 @@
 		background: var(--surface);
 	}
 
-	/* buy column */
-	.row-buy {
-		display: flex;
-		flex-direction: column;
-		align-items: flex-end;
-		gap: 0.9rem;
-		text-align: right;
-	}
-
-	.price {
-		display: flex;
-		align-items: baseline;
-		gap: 0.3rem;
-	}
-
-	.amount {
-		font-size: 2.3rem;
-		font-weight: 600;
-		letter-spacing: -0.03em;
-		font-feature-settings: 'tnum' 1;
-		line-height: 1;
-	}
-
-	.cadence {
-		font-size: 0.85rem;
-		font-weight: 500;
-		color: var(--faint);
-	}
-
+	/* buy */
 	form {
+		margin-top: auto;
 		width: 100%;
-		max-width: 12.5rem;
 	}
 
 	button {
@@ -554,47 +536,31 @@
 	}
 
 	/* ---------- Responsive ---------- */
-	@media (max-width: 880px) {
+	@media (max-width: 960px) {
 		.intro {
 			grid-template-columns: 1fr;
 			align-items: start;
 			gap: 1.75rem;
 		}
 
-		.row {
-			grid-template-columns: 1fr;
-			gap: 1.5rem;
-			align-items: stretch;
+		.plans {
+			grid-template-columns: repeat(2, minmax(0, 1fr));
+			gap: 1rem;
 		}
 
-		.row-buy {
-			flex-direction: row;
-			align-items: center;
-			justify-content: space-between;
-			text-align: left;
+		/* keep the featured lift from overlapping its grid row neighbour */
+		.card.featured {
+			transform: none;
 		}
 
-		form {
-			max-width: 11rem;
+		.card.featured:hover {
+			transform: translateY(-4px);
 		}
 	}
 
-	@media (max-width: 520px) {
-		.features {
+	@media (max-width: 540px) {
+		.plans {
 			grid-template-columns: 1fr;
-		}
-
-		.row-buy {
-			flex-direction: column;
-			align-items: stretch;
-		}
-
-		form {
-			max-width: none;
-		}
-
-		.price {
-			justify-content: flex-start;
 		}
 	}
 
@@ -611,11 +577,11 @@
 
 	@media (prefers-reduced-motion: reduce) {
 		.intro,
-		.row {
+		.card {
 			animation: none;
 		}
 		button,
-		.bar,
+		.card,
 		.arrow {
 			transition: none;
 		}
